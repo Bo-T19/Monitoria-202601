@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clasificador de Spam</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 720px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #2d3748;
+            margin-bottom: 8px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #718096;
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+
+        .api-config {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+
+        .api-config label {
+            color: #4a5568;
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .api-config input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 13px;
+            font-family: monospace;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 140px;
+            padding: 14px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: inherit;
+            resize: vertical;
+            transition: border-color 0.2s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .char-count {
+            text-align: right;
+            color: #a0aec0;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        button {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 16px;
+            transition: transform 0.1s, box-shadow 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .examples {
+            margin-top: 16px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .example-btn {
+            background: #edf2f7;
+            color: #4a5568;
+            border: 1px solid #e2e8f0;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            width: auto;
+            margin: 0;
+            font-weight: 400;
+        }
+
+        .example-btn:hover:not(:disabled) {
+            background: #e2e8f0;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .result {
+            margin-top: 28px;
+            padding: 24px;
+            border-radius: 12px;
+            display: none;
+        }
+
+        .result.visible {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result.spam {
+            background: #fff5f5;
+            border: 2px solid #fc8181;
+        }
+
+        .result.ham {
+            background: #f0fff4;
+            border: 2px solid #68d391;
+        }
+
+        .result.error {
+            background: #fffaf0;
+            border: 2px solid #f6ad55;
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .result-badge {
+            font-size: 14px;
+            font-weight: 700;
+            padding: 6px 14px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .result.spam .result-badge {
+            background: #fc8181;
+            color: white;
+        }
+
+        .result.ham .result-badge {
+            background: #68d391;
+            color: white;
+        }
+
+        .result.error .result-badge {
+            background: #f6ad55;
+            color: white;
+        }
+
+        .result-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .field {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .field:last-child {
+            border-bottom: none;
+        }
+
+        .field-key {
+            color: #4a5568;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .field-value {
+            color: #2d3748;
+            font-family: monospace;
+            font-size: 14px;
+            text-align: right;
+            word-break: break-word;
+            max-width: 60%;
+        }
+
+        .progress-bar {
+            margin-top: 16px;
+            background: rgba(0, 0, 0, 0.06);
+            border-radius: 10px;
+            height: 24px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #68d391 0%, #f6ad55 50%, #fc8181 100%);
+            transition: width 0.6s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 8px;
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .raw-json {
+            margin-top: 20px;
+        }
+
+        .raw-json summary {
+            cursor: pointer;
+            color: #4a5568;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 8px 0;
+        }
+
+        .raw-json pre {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            overflow-x: auto;
+            margin-top: 8px;
+        }
+
+        .loader {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Clasificador de Spam</h1>
+        <p class="subtitle">Pega un mensaje (en español, mín. 10 caracteres) y la API determinará si es spam.</p>
+
+        <div class="api-config">
+            <label for="apiUrl">API URL:</label>
+            <input type="text" id="apiUrl" value="https://api-spam-r9an.onrender.com/predict">
+        </div>
+
+        <textarea id="messageInput" placeholder="Escribe o pega aquí el mensaje a clasificar..."></textarea>
+        <div class="char-count"><span id="charCount">0</span> caracteres</div>
+
+        <div class="examples">
+            <button class="example-btn" data-example="You have won a free ticket to Bahamas! Click here to claim: www.freebahamas.com">Ejemplo: Spam</button>
+            <button class="example-btn" data-example="Hey, are we still meeting tomorrow at the coffee shop?">Ejemplo: Ham</button>
+            <button class="example-btn" data-example="URGENT! Your account has been compromised. Verify now at secure-login.net or lose access.">Ejemplo: Phishing</button>
+        </div>
+
+        <button id="predictBtn">Clasificar mensaje</button>
+
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        const messageInput = document.getElementById('messageInput');
+        const charCount = document.getElementById('charCount');
+        const predictBtn = document.getElementById('predictBtn');
+        const resultDiv = document.getElementById('result');
+        const apiUrlInput = document.getElementById('apiUrl');
+
+        messageInput.addEventListener('input', () => {
+            charCount.textContent = messageInput.value.length;
+        });
+
+        document.querySelectorAll('.example-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                messageInput.value = btn.dataset.example;
+                charCount.textContent = messageInput.value.length;
+            });
+        });
+
+        predictBtn.addEventListener('click', async () => {
+            const text = messageInput.value.trim();
+
+            if (text.length < 10) {
+                showError('El mensaje debe tener al menos 10 caracteres.');
+                return;
+            }
+
+            predictBtn.disabled = true;
+            predictBtn.innerHTML = '<span class="loader"></span>Clasificando...';
+            resultDiv.classList.remove('visible');
+
+            try {
+                const response = await fetch(apiUrlInput.value, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    const detail = data.detail
+                        ? (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail))
+                        : `HTTP ${response.status}`;
+                    showError(`Error de la API: ${detail}`, data);
+                    return;
+                }
+
+                showResult(data, text);
+            } catch (err) {
+                showError(`No se pudo conectar con la API: ${err.message}. Verifica que esté corriendo en ${apiUrlInput.value}.`);
+            } finally {
+                predictBtn.disabled = false;
+                predictBtn.textContent = 'Clasificar mensaje';
+            }
+        });
+
+        function showResult(data, originalText) {
+            const isSpam = data.is_spam;
+            const probability = data.spam_probability;
+            const probabilityPct = (probability * 100).toFixed(2);
+            const hamProbability = (1 - probability).toFixed(4);
+
+            resultDiv.className = 'result visible ' + (isSpam ? 'spam' : 'ham');
+            resultDiv.innerHTML = `
+                <div class="result-header">
+                    <span class="result-badge">${data.label}</span>
+                    <span class="result-title">${isSpam ? 'Mensaje detectado como SPAM' : 'Mensaje legítimo (HAM)'}</span>
+                </div>
+
+                <div class="field">
+                    <span class="field-key">label</span>
+                    <span class="field-value">"${data.label}"</span>
+                </div>
+                <div class="field">
+                    <span class="field-key">is_spam</span>
+                    <span class="field-value">${data.is_spam}</span>
+                </div>
+                <div class="field">
+                    <span class="field-key">spam_probability</span>
+                    <span class="field-value">${probability}</span>
+                </div>
+                <div class="field">
+                    <span class="field-key">ham_probability (calculada)</span>
+                    <span class="field-value">${hamProbability}</span>
+                </div>
+                <div class="field">
+                    <span class="field-key">longitud del mensaje</span>
+                    <span class="field-value">${originalText.length} caracteres</span>
+                </div>
+
+                <div class="progress-bar" title="Probabilidad de spam">
+                    <div class="progress-fill" style="width: ${probabilityPct}%">${probabilityPct}%</div>
+                </div>
+
+                <details class="raw-json">
+                    <summary>Ver respuesta JSON completa</summary>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                </details>
+            `;
+        }
+
+        function showError(message, data) {
+            resultDiv.className = 'result visible error';
+            resultDiv.innerHTML = `
+                <div class="result-header">
+                    <span class="result-badge">Error</span>
+                    <span class="result-title">${message}</span>
+                </div>
+                ${data ? `
+                <details class="raw-json" open>
+                    <summary>Detalle del error</summary>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                </details>` : ''}
+            `;
+        }
+
+        messageInput.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                predictBtn.click();
+            }
+        });
+    </script>
+</body>
+</html>

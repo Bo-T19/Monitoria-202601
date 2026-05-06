@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(python -c \"import pandas as pd; df=pd.read_csv\\('c:/Users/santi/OneDrive/Escritorio/Monitoria-202601/sesion_8/train.csv'\\); print\\(df.shape\\); print\\(df.dtypes.value_counts\\(\\)\\)\")",
-      "Bash(python -c ':*)"
-    ]
-  }
-}

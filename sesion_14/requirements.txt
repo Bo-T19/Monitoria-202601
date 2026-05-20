@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+llama-index-core
+llama-index-llms-openai
+llama-index-embeddings-openai
+requests
+scipy
